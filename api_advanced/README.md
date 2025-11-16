@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 Regular expression
 For this project, you have to build your regular expression using Oniguruma, a regular expression library that which is used by Ruby by default. 
 =======
@@ -28,3 +29,8 @@ This project contains Python scripts that interact with the Reddit API to practi
 python3 0-main.py programming
 ```
 >>>>>>> origin/main
+=======
+# ALU Reddit API Project - Advanced APIs
+This project covers API requests, pagination, recursion, and data parsing using the Reddit API.
+
+>>>>>>> 9de0919ab5f3ba61cacfd94e82e3b3b218bd2398
