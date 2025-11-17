@@ -1,113 +1,36 @@
 #!/usr/bin/python3
-"""Module to recursively count keywords in Reddit hot posts."""
+"""fetches the title of all hot posts for a given subreddit recursively"""
 
 import requests
 
 
-def count_words(subreddit, word_list, word_count=None, after=None):
-    """
-    Recursively query Reddit API and print sorted keyword counts.
+def count_words(subreddit, word_list=[], hot_list=[], after=""):
+    """Main function"""
+    URL = "https://www.reddit.com/r/{}/hot.json".format(subreddit)
 
-    Parses titles of all hot articles in a subreddit and counts occurrences
-    of given keywords. Results are printed in descending order by count,
-    with alphabetical sorting for ties.
-
-    Args:
-        subreddit (str): The name of the subreddit to query.
-        word_list (list): List of keywords to count (case-insensitive).
-        word_count (dict): Dictionary to track keyword counts.
-        after (str): Reddit's pagination token for the next page.
-
-    Returns:
-        None: Prints results or nothing if invalid subreddit.
-    """
-    if word_count is None:
-        word_count = {}
-        for word in word_list:
-            word_lower = word.lower()
-            word_count[word_lower] = word_count.get(word_lower, 0)
-
-    if subreddit is None or not isinstance(subreddit, str):
-        return
-
-    url = "https://www.reddit.com/r/{}/hot.json".format(subreddit)
-    headers = {
-        'User-Agent': 'linux:api_advanced:v1.0.0 (by /u/yourusername)'
-    }
-    params = {'limit': 100}
-    
-    if after:
-        params['after'] = after
-
+    HEADERS = {"User-Agent": "PostmanRuntime/7.35.0"}
+    PARAMS = {"after": after, "limit": 100}
     try:
-        response = requests.get(
-            url,
-            headers=headers,
-            params=params,
-            allow_redirects=False,
-            timeout=10
-        )
+        RESPONSE = requests.get(URL, headers=HEADERS, params=PARAMS,
+                                allow_redirects=False)
+        after = RESPONSE.json().get("data").get("after")
+        HOT_POSTS = RESPONSE.json().get("data").get("children")
+        [hot_list.append(post.get('data').get('title')) for post in HOT_POSTS]
+        if after is not None:
+            return count_words(subreddit, word_list, hot_list, after)
 
-        if response.status_code != 200:
-            return
+        new_dict = {}
+        word_list = set([wrd.lower() for wrd in word_list])
+        for title in hot_list:
+            for word in title.split():
+                if word.lower() in new_dict:
+                    new_dict[word.lower()] += 1
+                else:
+                    new_dict.update({word.lower(): 1})
 
-        data = response.json()
-        children = data.get('data', {}).get('children', [])
-        after_token = data.get('data', {}).get('after', None)
-
-        if len(children) == 0:
-            if after is None:
-                print_results(word_count)
-            return
-
-        for child in children:
-            post_data = child.get('data', {})
-            title = post_data.get('title', '')
-            if title:
-                count_keywords(title, word_count)
-
-        if after_token is None:
-            print_results(word_count)
-            return
-
-        return count_words(subreddit, word_list, word_count, after_token)
-
-    except (requests.RequestException, ValueError, KeyError):
-        return
-
-
-def count_keywords(title, word_count):
-    """
-    Count keyword occurrences in a title.
-
-    Args:
-        title (str): The post title to search.
-        word_count (dict): Dictionary tracking keyword counts.
-    """
-    words = title.lower().split()
-    
-    for word in words:
-        cleaned_word = ''.join(char for char in word if char.isalnum())
-        if cleaned_word in word_count:
-            word_count[cleaned_word] += 1
-
-
-def print_results(word_count):
-    """
-    Print sorted keyword counts.
-
-    Prints results in descending order by count, then alphabetically.
-    Only prints keywords with at least one occurrence.
-
-    Args:
-        word_count (dict): Dictionary of keyword counts.
-    """
-    filtered = {k: v for k, v in word_count.items() if v > 0}
-    
-    if not filtered:
-        return
-    
-    sorted_items = sorted(filtered.items(), key=lambda x: (-x[1], x[0]))
-    
-    for word, count in sorted_items:
-        print("{}: {}".format(word, count))
+        sorted_dict = sorted(new_dict.items(), key=lambda x: (-x[1], x[0]))
+        for key, value in sorted_dict:
+            if (key in word_list) and (value > 0):
+                print("{}: {}".format(key, value))
+    except Exception:
+        return None
